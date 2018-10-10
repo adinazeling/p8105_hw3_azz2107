@@ -16,8 +16,22 @@ library(ggplot2)
 
 ```{r BRFSS_df}
 # Load and clean BRFSS dataset
-BRFSS_df = 
+brfss_df = brfss_smart2010 %>% 
+  janitor::clean_names() %>% 
+  filter(topic == "Overall Health") %>% 
+  select(year, locationabbr, locationdesc, response, data_value) %>% 
+  mutate(response = factor(response,
+                           levels = c("Excellent", "Very good", "Good", "Fair", "Poor"))) 
+
+brfss_df
 ```
+
+```{r}
+filter(brfss_df, year == 2002) %>% 
+  group_by(locationabbr) %>% 
+  summarize(n = n())
+```
+
 
 
 ## Problem 2
