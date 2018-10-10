@@ -1,0 +1,27 @@
+---
+title: "P8103 Homework 3"
+author: "Adina Zhang"
+duedate: "October 15, 2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(p8105.datasets)
+library(ggplot2)
+```
+
+## Problem 1
+
+```{r BRFSS_df}
+# Load and clean BRFSS dataset
+BRFSS_df = 
+```
+
+
+## Problem 2
+
+
+
+## Problem 3
