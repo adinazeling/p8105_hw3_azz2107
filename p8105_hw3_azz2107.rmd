@@ -6,13 +6,21 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%")
+
 library(dplyr)
 library(p8105.datasets)
 library(ggplot2)
+
+theme_set(theme_bw() + theme(legend.position = "bottom"))
 ```
 
 ## Problem 1
+
+#### Set up BRFSS dataset
 
 ```{r BRFSS_df}
 # Load and clean BRFSS dataset
@@ -26,13 +34,83 @@ brfss_df = brfss_smart2010 %>%
 brfss_df
 ```
 
-```{r}
+#### Subset the dataset into number of locations per state in 2002
+
+```{r count_location}
+# Subset brfss dataset to count number of locations in each state
 filter(brfss_df, year == 2002) %>% 
+  distinct(locationabbr, locationdesc) %>% 
   group_by(locationabbr) %>% 
-  summarize(n = n())
+  count() %>% 
+  filter(n == 7) %>% 
+  knitr::kable()
+  
 ```
 
+In 2002, there were three states (CT, FL, and NC) that observed seven locations. 
 
+#### Spaghetti plot
+
+```{r spaghetti_plot}
+# Separate dataset into spaghetti plot variables
+spaghetti_plot = brfss_df %>% 
+  distinct(locationabbr, locationdesc, year) %>% 
+  group_by(locationabbr, year) %>% 
+  summarize(n = n())
+
+# Create spaghetti_plot 
+spaghetti_plot %>% 
+  ggplot(aes(x = year, y = n)) +
+  geom_line(aes(color = locationabbr)) +
+  viridis::scale_color_viridis(
+    name = "Location", 
+    discrete = TRUE
+  ) + 
+  labs(
+    title = "Number of locations in each state, 2002-2010",
+    x = "Year",
+    y = "Number of Locations",
+    caption = "BRFSS Dataset"
+  ) + 
+  theme(legend.position = "right")
+
+```
+
+#### Descriptive variables for "Excellent" proportions in 2002, 2006, and 2010
+
+```{r brfss_table}
+# Summarize descriptive variables to make a table
+brfss_df %>% 
+  filter(year %in% c(2002, 2006, 2010), response == "Excellent") %>% 
+  group_by(year) %>% 
+  summarize(mean_excellent = mean(data_value, na.rm = TRUE),
+            std_excellent = sd(data_value, na.rm = TRUE)) %>% 
+  knitr::kable()
+```
+
+#### Five-panel plot, distribution of responses
+
+```{r response_df}
+# Summarize average proportions of each response 
+response_df = brfss_df %>% 
+  group_by(year, locationabbr, response) %>% 
+  summarize(mean_prop = mean(data_value, na.rm = TRUE))
+
+# Plot distributions in five panels
+response_df %>% 
+  ggplot(aes(x = year, y = mean_prop)) + 
+  geom_point() + 
+  facet_grid(.~response) +
+  scale_x_continuous(breaks = c(2002, 2006, 2010),
+                     limits = c(2000, 2012)) + 
+  labs(
+    title = "Distribution of state-level response proportions, 2002-2010",
+    x = "Year",
+    y = "Average proportion of responses",
+    caption = "BRFSS dataset"
+  )
+
+```
 
 ## Problem 2
 
