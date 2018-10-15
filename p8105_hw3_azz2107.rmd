@@ -15,6 +15,7 @@ library(ggplot2)
 library(tidyr)
 library(patchwork)
 
+theme_set(theme_bw())
 ```
 
 ## Problem 1
@@ -33,10 +34,15 @@ brfss_df = brfss_smart2010 %>%
 brfss_df
 ```
 
+The BRFSS dataset contains health-related data from surveys of selected counties within the United States. In this problem, we are primarily focusing on how individuals reported their "Overall Health" from 2002 to 2010. This dataset contains `r nrow(brfss_df)` observations and `r ncol(brfss_df)` variables. Key variables include state and county locations, year the observations were taken, responses to the question of overall health (ie. excellent, fair, poor) and proportions of these responses.
+
 #### Subset the dataset into number of locations per state in 2002
 
+We are interested in counting how many locations (counties) were surveyed in each state.
+
 ```{r count_location}
-# Subset brfss dataset to count number of locations in each state
+# Subset brfss dataset by survey locations
+# Count number of responses
 filter(brfss_df, year == 2002) %>% 
   distinct(locationabbr, locationdesc) %>% 
   group_by(locationabbr) %>% 
@@ -46,11 +52,11 @@ filter(brfss_df, year == 2002) %>%
   
 ```
 
-In 2002, there were three states (CT, FL, and NC) that observed seven locations. 
+In 2002, there were three states (CT, FL, and NC) that obtained survey answers from seven locations. 
 
 #### Spaghetti plot
 
-```{r spaghetti_plot}
+```{r spaghetti_plot, fig.height = 10}
 # Separate dataset into spaghetti plot variables
 spaghetti_plot = brfss_df %>% 
   distinct(locationabbr, locationdesc, year) %>% 
@@ -71,21 +77,26 @@ spaghetti_plot %>%
     y = "Number of Locations",
     caption = "BRFSS Dataset"
   ) + 
-  theme(legend.position = "none")
-
+  theme(legend.position = "bottom", legend.box = "horizontal")
 ```
 
-#### Descriptive variables for "Excellent" proportions in 2002, 2006, and 2010
+Most states were surveyed at 10 or fewer locations. A couple states had been surveyed between 10 and 20 locations. There were two extreme cases where two states were surveyed at 40+ locations in 2007 and 2010. 
+
+#### Descriptive variables "Excellent" proportions across New York State in 2002, 2006, and 2010
 
 ```{r brfss_table}
 # Summarize descriptive variables to make a table
 brfss_df %>% 
-  filter(year %in% c(2002, 2006, 2010), response == "Excellent") %>% 
+  filter(year %in% c(2002, 2006, 2010), 
+         response == "Excellent", 
+         locationabbr == "NY") %>% 
   group_by(year) %>% 
   summarize(mean_excellent = mean(data_value, na.rm = TRUE),
             std_excellent = sd(data_value, na.rm = TRUE)) %>% 
   knitr::kable()
 ```
+
+Between 2002, 2006, and 2010 the average proportion of "excellent" responses does not differ by much. The highest average occured in 2002 with 24.04% responding they had excellent health and a standard deviation of 4.48%. Meanwhile, the lowest average occured in 2006 with 22.53% responding they had excellent health and a standard deviation of 4.00%.
 
 #### Five-panel plot, distribution of responses
 
@@ -97,13 +108,13 @@ response_df = brfss_df %>%
 
 # Plot distributions in five panels
 response_df %>% 
-  ggplot(aes(x = year, y = mean_prop)) + 
-  geom_line(aes(color = locationabbr)) + 
+  ggplot(aes(x = year, y = mean_prop, color = as.factor(year))) + 
+  geom_boxplot(aes(group = year)) + 
   facet_grid(.~response) + 
   labs(
     title = "Distribution of response proportions by state-level, 2002-2010",
     x = "Year",
-    y = "State level averages",
+    y = "State level averages (%)",
     caption = "BRFSS dataset"
   ) + 
   viridis::scale_color_viridis(
@@ -114,6 +125,8 @@ response_df %>%
         axis.text.x = element_text(angle = 60))
 
 ```
+
+Overall, year to year we see that response proportions remain around the same percentage. The highest proportions of responses fall under "Very good", "Good", and "Excellent" categories. The lowest proportions of responses fall under "Fair" and "Poor" categories. There also appears to be slightly more variance in the "Poor" category with more outliers. Based off of this figure, we might be able to conclude that between 2002 and 2010, Americans generally felt at least good or even better of their overall health.
 
 ## Problem 2
 
@@ -126,7 +139,7 @@ instacart_df = instacart
 instacart_df
 ```
 
-Instacart is an online grocery shopping company, and the instacard dataset contains information on online grocery orders from their customers. The instacart dataset includes `r nrow(instacart_df)` observations and `r ncol(instacart_df)` variables. Some of these key variables include product name, food aisle information (name, number, department), time or order (day of the week, hour of the day, days since last ordered). For example, there are `r nrow(distinct(instacart_df, instacart_df$department))` departments which range from snacks, frozen foods, to dairy and eggs... 
+Instacart is an online grocery shopping company, and the instacard dataset contains information on online grocery orders from their customers. The instacart dataset includes `r nrow(instacart_df)` observations and `r ncol(instacart_df)` variables. Some of these key variables include product name, food aisle information (name, number, department), time or order (day of the week, hour of the day, days since last ordered). For example, there are `r nrow(distinct(instacart_df, instacart_df$department))` departments which include snacks, frozen foods, and dairy and eggs.  On average, most customers will make orders on `r mean(instacart_df$order_dow)` day, which according to the datasets key is between Tuesday or Wednesday. The most popular time to place orders is at `r mean(instacart_df$order_hour_of_day)` hours. 
 
 #### Aisle information
 
@@ -144,6 +157,7 @@ aisle_count
 
 **Aisle Count Plot**
 
+
 ```{r plot_aisle_count, fig.height = 15}
 # Plot distribution of items ordered from each aisle
 ggplot(aisle_count, aes(x = log(n), y = aisle)) +
@@ -151,7 +165,7 @@ ggplot(aisle_count, aes(x = log(n), y = aisle)) +
   facet_grid(rows = vars(department), scales = "free", space = "free") + 
   labs(
     title = "Number of items ordered by aisle",
-    x = "Number of items ordered (log(n))",
+    x = "Log(Number of items ordered)",
     y = "Aisle name"
   ) + 
   theme(axis.ticks = element_blank(), 
@@ -159,6 +173,8 @@ ggplot(aisle_count, aes(x = log(n), y = aisle)) +
         axis.text.y = element_text(size = 7)) 
 
 ```
+
+Based off of this figure, the most popular products fall under produce (fresh vegetables and fruits) as well as dairy (yogurt and packaged cheese). Some of the least bought products include baby accessories and baby bath/body care, beauty products, and frozen juice.
 
 #### Popular aisle items
 
@@ -175,6 +191,8 @@ instacart_df %>%
   filter(product_rank == 1) %>% 
   knitr::kable()
 ```
+
+In the baking ingredient aisle, light brown sugar is the most commonly bought item with it being bought 499 times. Under dog food care, snack sticks chicken and rice recipe dog treats are the most popular item with 30 counts of purchase. Among packaged vegetables and fruits, organic baby spinach is the most popular with 9,784 counts of purchase. 
 
 #### Average time of day
 
@@ -200,24 +218,32 @@ This table depicts the average time of day (Sunday through Saturday) customers o
 
 ```{r ny_noaa_df}
 # Load NY NOAA Summary and clean
+# Separate date into month, day, and year variables
+# Divide tmax and tmin temperatures by 10 to change units to deg Celsius
+# Change snowfall to centimeters
 ny_noaa_df = ny_noaa %>% 
   separate(date, into = c("year", "month", "day"), sep = "-") %>% 
-  mutate(year = as.integer(year),
-         month = as.integer(month),
-         day = as.integer(day),
+  mutate(year = as.numeric(year),
+         month = as.numeric(month),
+         day = as.numeric(day),
+         snow = as.numeric(snow)/10,
          tmax = as.integer(tmax)/10,
          tmin = as.integer(tmin)/10)
 
 ny_noaa_df
 ```
 
-In this dataset, r length((rowSums(is.na(ny_noaa_df))))/nrow(ny_noaa_df)` of observations have missing variables. 
+The NY NOAA dataset records weather and climate related information from the weather stations located in New York state, between 1980 to 2010. This dataset has `r nrow(ny_noaa_df)` observations and `r ncol(ny_noaa_df)` variables. Some key variables include weather station ID, date, precipitation amounts (precipitation, snowfall, snow depth), and temperatures (minimum and maximum). For example, the average snowfall in 2007 was `r mean(filter(ny_noaa_df, ny_noaa_df$year == 2007)$snow, na.rm = TRUE)` mm. That same year, the average minimum temperature recorded in thiswas `r mean(filter(ny_noaa_df, ny_noaa_df$year == 2007)$tmin, na.rm = TRUE)` deg C. The average maximum temperature recorded in 2007 was `r mean(filter(ny_noaa_df, ny_noaa_df$year == 2007)$ny_noaa_df$tmax, na.rm = TRUE)` deg C. It should be noted, that there are a significant amount of missing data in this dataset. For example, the following percentages are proportions of missing values for a couple of variables:   
+* `r round((sum(is.na(ny_noaa_df$prcp))/nrow(ny_noaa_df)), digits = 4) * 100`% of precipitation variables have missing values.   
+* `r round((sum(is.na(ny_noaa_df$tmax))/nrow(ny_noaa_df)), digits = 4) * 100`% of maximum temperature values have missing values.  
+* `r round((sum(is.na(ny_noaa_df$snow))/nrow(ny_noaa_df)), digits = 4) * 100`% of snowfall measurements have missing values.  
 
 #### Maximum temperature
 
 ```{r tmax_plot, error = FALSE, message = FALSE}
 tmax_plot = ny_noaa_df %>%
   filter(month %in% c(1, 7), !(is.na(tmax))) %>% 
+  mutate(month = factor(month, levels = c(1,7), labels = c("January", "July"))) %>% 
   group_by(id, year, month) %>% 
   summarize(mean_max_temp = mean(tmax, na.rm = TRUE))
 
@@ -232,13 +258,13 @@ tmax_plot %>%
     discrete = TRUE
   ) + 
   labs(
-    title = "Average weather station maximum temperatures in January and July, 1980 - 2010",
+    title = "Average maximum temperatures by weather station, 1980 - 2010",
     x = "Year",
     y = "Average maximum temperature (deg C)",
-    caption = "NY NOAA Dataset"
-  )
+    caption = "NY NOAA Dataset")
 ```
 
+In January, the average maximum temperature was significantly lower than in July as one would expect. Over the years, the average maximum temperature in January fluctuates frequently.  In comparison,  July saw a pretty constant average maximum temperature over the years. There are perhaps a couple of unusual years, in January 1994 and 2004 there were some incredibly cold winters. In July, there is one weather station record that stands out as an outlier. Around 1997 or 1998, one weather station reported a very low average maximum temperature at around 14 deg C. 
 
 #### Two panel temperature and snowfall plots
 
@@ -255,14 +281,18 @@ noaa_hexplot = ny_noaa_df %>%
 # Create a barplot of snowfall by year
 noaa_barplot = ny_noaa_df %>% 
   filter(snow > 0 & snow < 100) %>% 
-  ggplot(aes(x = year, y = snow)) + 
-  geom_boxplot(aes(group = year)) + 
+  group_by(year) %>% 
+  ggplot(aes(x = year, y = snow, group = year)) + 
+  geom_boxplot() + 
   coord_flip() + 
   labs(
     x = "Year",
-    y = "Snowfall (mm)"
+    y = "Snowfall (cm)"
     )
 
 noaa_hexplot + noaa_barplot
 ```
 
+From the maximum temperature vs. minimum temperature plot, a higher minimum temperature is correlated with a higher maximum temperature on the same day. Additionally, the most common temperatures correlated with each other is in the light blue area of the graph where minimum temperature ranges from approximated -15 deg C to 15 deg C and maximum temperature ranges from approximated -10 deg C to 30 deg C. Where the plot is dark colored, there are outliers. For example there was a day where minimum temperature was around 50 deg C and the maximum temperature was 0 deg C. This may resulted from data input error.  
+
+In the distribution of snowfall by year plot, there does not appear to be much difference or change in the amount of snowfall between 1980 to 2010. This plot does show that there is variance from year to year. Some years have extreme outliers. 2002 and 2008 are some examples of this, where there are several large values for snowfall.
