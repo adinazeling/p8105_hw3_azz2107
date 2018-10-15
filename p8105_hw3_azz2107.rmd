@@ -16,6 +16,7 @@ library(dplyr)
 library(p8105.datasets)
 library(ggplot2)
 library(tidyr)
+library(patchwork)
 
 theme_set(theme_bw() + theme(legend.position = "bottom"))
 ```
@@ -69,7 +70,7 @@ spaghetti_plot %>%
     discrete = TRUE
   ) + 
   labs(
-    title = "Number of locations in each state, 2002-2010",
+    title = "Number of locations by state, 2002-2010",
     x = "Year",
     y = "Number of Locations",
     caption = "BRFSS Dataset"
@@ -101,16 +102,20 @@ response_df = brfss_df %>%
 # Plot distributions in five panels
 response_df %>% 
   ggplot(aes(x = year, y = mean_prop)) + 
-  geom_point() + 
-  facet_grid(.~response) +
-  scale_x_continuous(breaks = c(2002, 2006, 2010),
-                     limits = c(2000, 2012)) + 
+  geom_line(aes(color = locationabbr)) + 
+  facet_grid(.~response) + 
   labs(
-    title = "Distribution of state-level response proportions, 2002-2010",
+    title = "Distribution of response proportions by state-level, 2002-2010",
     x = "Year",
     y = "State level averages",
     caption = "BRFSS dataset"
-  )
+  ) + 
+  viridis::scale_color_viridis(
+    name = "Location", 
+    discrete = TRUE
+  ) + 
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 60))
 
 ```
 
@@ -150,7 +155,7 @@ ggplot(aisle_count, aes(x = reorder(aisle, order(n, decreasing = TRUE)), y = n))
   labs(
     title = "Number of items ordered from each aisle",
     x = "Aisle Names",
-    y = "N",
+    y = "Number of iterms ordered",
     caption = "Instacart Data"
   ) + 
   theme(axis.ticks = element_blank(), 
@@ -168,7 +173,7 @@ instacart_df %>%
                       "dog food care", 
                       "packaged vegetables fruits")) %>% 
   group_by(aisle, product_name) %>% 
-  summarize(n = n()) %>% # Counts by group
+  summarize(n = n()) %>% 
   mutate(product_rank = min_rank(desc(n))) %>% 
   filter(product_rank == 1) %>% 
   knitr::kable()
@@ -193,8 +198,58 @@ This table depicts the average time of day (Sunday through Saturday) customers o
 
 ## Problem 3
 
+$$$$ NY NOAA Summary
+
+```{r, echo = FALSE}
+# Load NY NOAA Summary and clean
+ny_noaa_df = ny_noaa %>% 
+  separate(date, into = c("year", "month", "day"), sep = "-") %>% 
+  mutate(year = as.integer(year),
+         month = as.integer(month),
+         day = as.integer(day),
+         tmax = as.integer(tmax)/10,
+         tmin = as.integer(tmin)/10)
+
+ny_noaa_df
+```
+
+In this dataset, `r length((rowSums(is.na(ny_noaa_df))))/nrow(ny_noaa_df)` of observations have missing variables. 
+
+#### Maximum temperature
+
+```{r, error = FALSE, message = FALSE}
+tmax_plot = ny_noaa_df %>%
+  filter(month %in% c(1, 7), !(is.na(tmax))) %>% 
+  group_by(id, year, month) %>% 
+  summarize(mean_max_temp = mean(tmax, na.rm = TRUE))
+
+tmax_plot %>% 
+  ggplot(aes(x = year, y = mean_max_temp)) + 
+  geom_line(aes(color = id)) + 
+  geom_smooth(se = FALSE) + 
+  facet_grid(.~month) + 
+  theme(legend.position = "none") + 
+  viridis::scale_color_viridis(
+    name = "Location", 
+    discrete = TRUE
+  ) + 
+  labs(
+    title = "Average weather station maximum temperatures in January and July, 1980 - 2010",
+    x = "Year",
+    y = "Average maximum temperature (deg C)",
+    caption = "NY NOAA Dataset"
+  )
+```
 
 
+#### Two panel temperature and snowfall plots
 
+```{r}
+ny_noaa_df %>% 
+  ggplot(aes(x = tmax, y = tmin)) 
+```
 
+```{r}
+
+```
 
