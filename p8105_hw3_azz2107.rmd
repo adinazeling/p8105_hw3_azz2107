@@ -6,10 +6,7 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,
-  fig.width = 6,
-  fig.asp = .6,
-  out.width = "100%")
+knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(dplyr)
@@ -18,7 +15,6 @@ library(ggplot2)
 library(tidyr)
 library(patchwork)
 
-theme_set(theme_bw() + theme(legend.position = "bottom"))
 ```
 
 ## Problem 1
@@ -139,7 +135,7 @@ There are `r nrow(distinct(instacart_df, aisle))` aisles in this dataset. Some e
 ```{r aisle_count}
 # Group by aisles and summarize counts
 aisle_count = instacart_df %>% 
-  group_by(aisle) %>% 
+  group_by(aisle, department) %>% 
   summarize(n = n()) %>% 
   arrange(desc(n)) 
   
@@ -148,19 +144,20 @@ aisle_count
 
 **Aisle Count Plot**
 
-```{r plot_aisle_count}
+```{r plot_aisle_count, fig.height = 15}
 # Plot distribution of items ordered from each aisle
-ggplot(aisle_count, aes(x = reorder(aisle, order(n, decreasing = TRUE)), y = n)) +
-  geom_bar(stat = "identity") + 
+ggplot(aisle_count, aes(x = log(n), y = aisle)) +
+  geom_point(aes(color = department)) + 
+  facet_grid(rows = vars(department), scales = "free", space = "free") + 
   labs(
-    title = "Number of items ordered from each aisle",
-    x = "Aisle Names",
-    y = "Number of iterms ordered",
-    caption = "Instacart Data"
+    title = "Number of items ordered by aisle",
+    x = "Number of items ordered (log(n))",
+    y = "Aisle name"
   ) + 
   theme(axis.ticks = element_blank(), 
         legend.position = "none",
-        axis.text.x = element_text(size = 3, angle = 290))
+        axis.text.y = element_text(size = 7)) 
+
 ```
 
 #### Popular aisle items
@@ -193,14 +190,15 @@ instacart_df %>%
   knitr::kable()
 
 ```
+  
 This table depicts the average time of day (Sunday through Saturday) customers ordered coffee ice cream and pink lady apples. Note that the week days begin with Sunday (0) and progress to Saturday (6). Based off of this table, people usual buy coffee ice cream in the afternoons with the earliest average time at 12.26 hours on Friday and the latest average time at 15.38 hours on Tuesday. People usually buy Pink Lady Apples at mid-day with the earliest average time at 11.36 hours on Monday and the latest average time at 14.25 hours on Wednesday.
 
 
 ## Problem 3
 
-$$$$ NY NOAA Summary
+#### NY NOAA Summary
 
-```{r, echo = FALSE}
+```{r ny_noaa_df}
 # Load NY NOAA Summary and clean
 ny_noaa_df = ny_noaa %>% 
   separate(date, into = c("year", "month", "day"), sep = "-") %>% 
@@ -213,11 +211,11 @@ ny_noaa_df = ny_noaa %>%
 ny_noaa_df
 ```
 
-In this dataset, `r length((rowSums(is.na(ny_noaa_df))))/nrow(ny_noaa_df)` of observations have missing variables. 
+In this dataset, r length((rowSums(is.na(ny_noaa_df))))/nrow(ny_noaa_df)` of observations have missing variables. 
 
 #### Maximum temperature
 
-```{r, error = FALSE, message = FALSE}
+```{r tmax_plot, error = FALSE, message = FALSE}
 tmax_plot = ny_noaa_df %>%
   filter(month %in% c(1, 7), !(is.na(tmax))) %>% 
   group_by(id, year, month) %>% 
@@ -244,12 +242,27 @@ tmax_plot %>%
 
 #### Two panel temperature and snowfall plots
 
-```{r}
-ny_noaa_df %>% 
-  ggplot(aes(x = tmax, y = tmin)) 
-```
+```{r two_panel_temp_snowfall}
+# Create a hexplot to compare tmin and tmax
+noaa_hexplot = ny_noaa_df %>% 
+  ggplot(aes(x = tmin, y = tmax)) +
+  geom_hex() + 
+  labs(
+    x = "Minimum temperature (deg C)",
+    y = "Maximum temperature (deg C)"
+  )
 
-```{r}
+# Create a barplot of snowfall by year
+noaa_barplot = ny_noaa_df %>% 
+  filter(snow > 0 & snow < 100) %>% 
+  ggplot(aes(x = year, y = snow)) + 
+  geom_boxplot(aes(group = year)) + 
+  coord_flip() + 
+  labs(
+    x = "Year",
+    y = "Snowfall (mm)"
+    )
 
+noaa_hexplot + noaa_barplot
 ```
 
